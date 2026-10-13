@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout repository history
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
         env:
           GIT_CONFIG_COUNT: "1"
           GIT_CONFIG_KEY_0: "core.autocrlf"
@@ -31,17 +31,14 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
-
-      - name: Install Node CI dependencies
-        run: npm ci --prefix .github/ci/node
 
       - name: Test plugin package tooling
         run: python3 scripts/test-plugin-package.py
@@ -60,10 +57,8 @@ jobs:
       # would report their versions as edits made by the PR.
       - name: Forbid manifest version changes in pull requests
         shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ "${EVENT_NAME}" = "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
             if ! git rev-parse -q --verify HEAD^2 >/dev/null; then
               echo "expected the pull request merge commit at HEAD" >&2
               exit 1
@@ -74,7 +69,7 @@ jobs:
           fi
 
       - name: Validate Claude marketplace package without warnings
-        run: .github/ci/node/node_modules/.bin/claude plugin validate . --strict
+        run: npx --yes @anthropic-ai/claude-code@2.1.229 plugin validate . --strict
 
   python39-compat:
     name: Python 3.9 Compatibility
@@ -83,12 +78,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Set up Python 3.9
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        uses: actions/setup-python@v7
         with:
           python-version: "3.9"
 
@@ -109,7 +104,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
         env:
           GIT_CONFIG_COUNT: "1"
           GIT_CONFIG_KEY_0: "core.autocrlf"
@@ -118,16 +113,9 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Set up uv
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          version: latest-known
-          enable-cache: false
 
       - name: Verify accessible SVG contract
         if: always()
@@ -257,12 +245,21 @@ jobs:
         id: screenshots_tests
         run: python scripts/test-verify-screenshot-freshness.py
 
+      - name: Install Pillow for README thumbnail verification
+        if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        env:
+          PILLOW_VERSION: "12.1.1"
+        shell: bash
+        run: |
+          pip install "Pillow==${PILLOW_VERSION}"
+          python -c "import PIL; print('Pillow', PIL.__version__)"
+
       - name: Verify README thumbnails
         if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         id: readme_thumbs
         run: |
-          uv run --locked --project .github/ci/python python scripts/test-build-readme-thumbs.py
-          uv run --locked --project .github/ci/python python scripts/build-readme-thumbs.py --check
+          python scripts/test-build-readme-thumbs.py
+          python scripts/build-readme-thumbs.py --check
 
       - name: Verify packaged self-check
         if: always()
@@ -425,7 +422,7 @@ jobs:
 
       # lint-render.py's oracle is pixels, so the browser is part of the contract:
       # pin Playwright exactly, and let that pin choose the Chromium build. Bump
-      # both together through the uv lockfile.
+      # both together, deliberately, by editing PLAYWRIGHT_VERSION.
       #
       # One platform only. Antialiasing and font fallback differ per OS, so running
       # a pixel comparison across the whole matrix would compare six oracles rather
@@ -433,22 +430,25 @@ jobs:
       # matrix legs still run every source-level gate.
       - name: Install Playwright Chromium
         if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        env:
+          PLAYWRIGHT_VERSION: "1.62.0"
         shell: bash
         run: |
-          uv run --locked --project .github/ci/python playwright install --with-deps chromium
-          uv run --locked --project .github/ci/python python -c "import importlib.metadata as m; print('playwright', m.version('playwright'))"
+          pip install "playwright==${PLAYWRIGHT_VERSION}"
+          playwright install --with-deps chromium
+          python -c "import importlib.metadata as m; print('playwright', m.version('playwright'))"
 
       # The checks before the sweep: a broken linter must not be able to report
       # a clean repository.
       - name: Verify render linter checks
         if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         id: render_selftest
-        run: uv run --locked --project .github/ci/python python scripts/lint-render.py --self-test
+        run: python scripts/lint-render.py --self-test
 
       - name: Run render linter
         if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         id: render
-        run: uv run --locked --project .github/ci/python python scripts/lint-render.py --all
+        run: python scripts/lint-render.py --all
 
       - name: Verify generated icon assets
         if: always()
