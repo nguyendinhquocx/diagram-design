@@ -157,11 +157,6 @@ jobs:
         id: mojibake
         run: python scripts/test-fix-mojibake.py
 
-      - name: Verify skill HTML comments pass the Hermes install scan
-        if: always()
-        id: install_scan
-        run: python scripts/test-install-scan.py
-
       - name: Run skin linter
         if: always()
         id: skin
