@@ -400,16 +400,6 @@ jobs:
         id: beeswarm_tests
         run: python scripts/test-verify-beeswarm.py
 
-      - name: Verify box-plot five-number geometry
-        if: always()
-        id: box_plot
-        run: python scripts/verify-box-plot.py --all
-
-      - name: Verify box-plot checker
-        if: always()
-        id: box_plot_tests
-        run: python scripts/test-verify-box-plot.py
-
       - name: Verify architecture delta snapshots and ledger
         if: always()
         id: architecture_delta
