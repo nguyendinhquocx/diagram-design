@@ -212,6 +212,13 @@ jobs:
           python scripts/verify-excalidraw-import.py
           python scripts/test-verify-excalidraw-import.py
 
+      - name: Verify PlantUML import script
+        if: always()
+        id: plantuml
+        run: |
+          python scripts/verify-plantuml-import.py
+          python scripts/test-verify-plantuml-import.py
+
       - name: Verify optional motion contract
         if: always()
         id: motion
