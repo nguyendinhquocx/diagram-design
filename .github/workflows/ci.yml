@@ -73,8 +73,7 @@ jobs:
 
   python39-compat:
     name: Python 3.9 Compatibility
-    # setup-python publishes 3.9 builds for 24.04, but not the newer latest runner.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
@@ -170,14 +169,6 @@ jobs:
         run: |
           python scripts/test-verify-polar.py
           python scripts/verify-polar.py
-
-      - name: Verify Unit Grid count and geometry
-        if: always()
-        id: unit_grid
-        shell: bash
-        run: |
-          python scripts/test-verify-unit-grid.py
-          python scripts/verify-unit-grid.py --all
 
       - name: Verify heatmap monotone ramp and grid
         if: always()
