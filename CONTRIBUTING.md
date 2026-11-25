@@ -66,6 +66,7 @@ Every validation gate below must pass before a PR is ready. They also run automa
 | Docs/routing sync (description hooks, gallery, README tree, reference links and style-guide anchors, strict-bundler support paths, command/prompt surfaces, font-link parity, template title fallback order, SKILL.md split routing) | `python3 scripts/verify-docs-sync.py && python3 scripts/test-verify-docs-sync.py` |
 | Canonical README screenshots match their example HTML sources and recorded PNG digests | `python3 scripts/verify-screenshot-freshness.py` |
 | Packaged PNG exporter's stalled-webfont fallback (window.stop on timeout, warning, normal load) | `python3 scripts/test-export-wait.py` (requires Playwright; skips without it) |
+| Packaged vector PDF exporter (exact viewBox bounds, sheet sizing, full-page, stalled-webfont fallback) | `python3 scripts/test-export-pdf.py` (requires Playwright; skips browser cases without it) |
 | Screenshot freshness checker behaves (CRLF checkout, real source drift, raw PNG digests) | `python3 scripts/test-verify-screenshot-freshness.py` |
 | README WebP previews match their PNGs, manifest, dimensions, and full-size links | `python3 scripts/test-build-readme-thumbs.py && python3 scripts/build-readme-thumbs.py --check` (requires `Pillow==12.1.1`) |
 | Packaged output self-check behaves (pass + adversarial cases, including `--offline`) | `python3 scripts/test-self-check.py` |
@@ -119,6 +120,7 @@ Every validation gate below must pass before a PR is ready. They also run automa
 | Git-graph commits sit on lanes and a shared time grid; every merge has two earlier parents | `python3 scripts/verify-git-graph.py --all` |
 | Git-graph checker behaves (pass + adversarial cases) | `python3 scripts/test-verify-git-graph.py` |
 | Quoted CSS data is not read as a geometry declaration by any verifier (pass + adversarial cases) | `python3 scripts/test-css-string-scan.py` |
+| Every verifier ends an HTML comment where the browser does (`<!-->`, `<!--->`, `--!>`) | `python3 scripts/test-html-comment-forms.py` |
 | Every directional tone claim matches the ramp it describes, on every skin | `python3 scripts/verify-skin-polarity.py --all` |
 | Skin-polarity checker behaves (pass + adversarial cases) | `python3 scripts/test-verify-skin-polarity.py` |
 | Generated icon assets are up to date (`icons.html`, `primitive-icons.md`) | `python3 scripts/build-icons.py` then `git diff --exit-code` on the two generated files |
@@ -250,6 +252,7 @@ python3 scripts/test-plugin-package.py \
   && python3 scripts/verify-git-graph.py --all \
   && python3 scripts/test-verify-git-graph.py \
   && python3 scripts/test-css-string-scan.py \
+  && python3 scripts/test-html-comment-forms.py \
   && python3 scripts/verify-skin-polarity.py --all \
   && python3 scripts/test-verify-skin-polarity.py \
   && python3 scripts/test-export-wait.py
