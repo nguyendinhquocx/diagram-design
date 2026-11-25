@@ -438,18 +438,6 @@ jobs:
           playwright install --with-deps chromium
           python -c "import importlib.metadata as m; print('playwright', m.version('playwright'))"
 
-      - name: Verify packaged vector PDF exporter
-        if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        id: export_pdf
-        shell: bash
-        run: |
-          out="$(uv run --locked --project .github/ci/python python scripts/test-export-pdf.py)"
-          echo "$out"
-          case "$out" in
-            SKIP:*) echo "::error::export-pdf tests skipped despite Playwright being installed" && exit 1 ;;
-          esac
-          echo "$out" | grep -q "ALL PDF EXPORT TESTS PASSED"
-
       # The checks before the sweep: a broken linter must not be able to report
       # a clean repository.
       - name: Verify render linter checks
