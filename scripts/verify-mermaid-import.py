@@ -826,8 +826,8 @@ def check_outer_markdown_fences(tmp: Path) -> None:
 
 def check_markdown_and_grammars(tmp: Path) -> None:
     header = run_extract([str(README_FIXTURE)])
-    if "2 diagram(s)" not in header or "[1] sequenceDiagram" not in header:
-        fail("Markdown block list is missing kinds or counts")
+    if "2 diagram(s)" not in header or "[1] not selected" not in header:
+        fail("Markdown block list is missing counts or selection state")
     if "## Diagram 1" in header:
         fail("default selection must emit only diagram 0")
 
@@ -1026,8 +1026,34 @@ def check_older_state_header(tmp: Path) -> None:
     ok("the older stateDiagram header reads the same as stateDiagram-v2")
 
 
+def check_flowchart_header_forms(tmp: Path) -> None:
+    path = tmp / "flowchart-header.mmd"
+    body = "\n  A[Start] --> B{Ok?}\n  B -->|yes| C[Done]\n"
+    path.write_text("graph TB" + body, encoding="utf-8")
+    expected = run_extract([str(path), "--json"])
+    for header in ("graph", "flowchart", "graph \t"):
+        path.write_text(header + body, encoding="utf-8")
+        if run_extract([str(path), "--json"]) != expected:
+            fail(f"`{header}` did not read the same as `graph TB`")
+    for header, direction in (
+        ("graph >", "LR"), ("graph <", "RL"), ("flowchart ^", "BT"),
+        ("flowchart v", "TB"), ("graph V", "TB"), ("flowchart-elk TD", "TD"),
+    ):
+        path.write_text(f"{header}; A --> B\n", encoding="utf-8")
+        diagram = json.loads(run_extract([str(path), "--json"]))["diagrams"][0]
+        edges = [(e["source"], e["target"]) for e in diagram["edges"]]
+        if (diagram["kind"], diagram["direction"], edges) != ("flowchart", direction, [("A", "B")]):
+            fail(f"`{header}; A --> B` read as {diagram['kind']} {diagram['direction']} {edges}")
+    for header in (
+        "flowchart XY", "graphics TD", "graph TD2", "graph vertex", "graph v-x", "graph;",
+    ):
+        path.write_text(f"{header}\nA --> B\n", encoding="utf-8")
+        expect_error([str(path)], "not a Mermaid file at line 1")
+    ok("flowchart headers without a direction or with arrow directions parse")
+
+
 def check_selection_before_parse(tmp: Path) -> None:
-    """A malformed block fails only when it is selected (#209)."""
+    """Only selected blocks are parsed, and selected malformed blocks fail."""
     bad_first = tmp / "bad-first-block.md"
     bad_first.write_text(
         "# doc\n\n```mermaid\nflowchart LR\nA -->\n```\n\n"
@@ -1043,7 +1069,7 @@ def check_selection_before_parse(tmp: Path) -> None:
         fail("--diagram 1 did not return block 1 past a malformed block 0")
     digest = run_extract([str(bad_first), "--diagram", "1"])
     for needle in (
-        "2 diagram(s): [0] unparsed: malformed edge at line 5, [1] flowchart (2n/1e)",
+        "2 diagram(s): [0] not selected, [1] flowchart (2n/1e)",
         "## Diagram 1",
     ):
         if needle not in digest:
@@ -1061,12 +1087,14 @@ def check_selection_before_parse(tmp: Path) -> None:
         encoding="utf-8",
     )
     default_digest = run_extract([str(bad_second)])
-    if "[1] unparsed: unsupported diagram kind" not in default_digest:
-        fail(f"default selection did not list the unparsed block 1: {default_digest!r}")
+    if "[1] not selected" not in default_digest:
+        fail(f"default selection did not list block 1 as unselected: {default_digest!r}")
+    if "unsupported diagram kind" in default_digest:
+        fail(f"unselected block content reached the digest: {default_digest!r}")
     if "## Diagram 0" not in default_digest:
         fail("default selection did not emit diagram 0 past a bad block 1")
     expect_error([str(bad_second), "--diagram", "1"], "unsupported diagram kind: `pie`")
-    ok("--diagram selects a block before parsing it; selected bad blocks still fail")
+    ok("--diagram isolates unselected blocks; selected bad blocks still fail")
 
 
 def check_adversarial(tmp: Path) -> None:
@@ -2241,6 +2269,7 @@ def main() -> int:
         check_state_descriptions(tmp)
         check_named_composite_states(tmp)
         check_older_state_header(tmp)
+        check_flowchart_header_forms(tmp)
         check_selection_before_parse(tmp)
         check_utf8_bom(tmp)
         check_legacy_stdout_encoding(tmp)
